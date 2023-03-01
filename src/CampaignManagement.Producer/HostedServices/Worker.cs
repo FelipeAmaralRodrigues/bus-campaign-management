@@ -41,10 +41,10 @@ namespace CampaignManagement.Producer.HostedServices
                     {
                         UId = Guid.NewGuid(),
                         Message = $"Teste",
-                        UrlImage = _configuration["UrlImage"],
-                        SubAccountSID = _configuration["SubAccountSID"],
-                        ToPhoneNumber = _configuration["ToPhoneNumber"],
-                        FromPhoneNumber = _configuration["FromPhoneNumber"]
+                        UrlImage = _configuration["MessageTest:UrlImage"],
+                        SubAccountSID = _configuration["MessageTest:SubAccountSID"],
+                        ToPhoneNumber = _configuration["MessageTest:ToPhoneNumber"],
+                        FromPhoneNumber = _configuration["MessageTest:FromPhoneNumber"]
                     };
                     _executionCount++;
                     _logger.LogInformation($"Message sended: {{ uid: \"{command.UId}\", message: \"{command.Message}\"}}");

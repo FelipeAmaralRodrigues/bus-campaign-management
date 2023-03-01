@@ -93,4 +93,22 @@ namespace CampaignManagement.Consumer
             }
         }
     }
+
+    public class SubmitSmsMessageConsumerDefinition : ConsumerDefinition<SubmitSmsMessageConsumer>
+    {
+        protected override void ConfigureConsumer(IReceiveEndpointConfigurator endpointConfigurator, IConsumerConfigurator<SubmitSmsMessageConsumer> consumerConfigurator)
+        {
+            endpointConfigurator.UseDelayedRedelivery(r =>
+            {
+                r.Intervals(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(30));
+            });
+
+            consumerConfigurator.UseMessageRetry(x =>
+            {
+                x.Immediate(2);
+            });
+
+            endpointConfigurator.UseInMemoryOutbox();
+        }
+    }
 }

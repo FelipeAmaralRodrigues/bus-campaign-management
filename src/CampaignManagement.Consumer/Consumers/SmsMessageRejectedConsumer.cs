@@ -12,15 +12,25 @@ namespace CampaignManagement.Consumer
     {
         public async Task Consume(ConsumeContext<SmsMessageRejected> context)
         {
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage", EnvironmentVariableTarget.Process));
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
-            CloudTable table = tableClient.GetTableReference("TwilioErrors");
-            await table.CreateIfNotExistsAsync();
-            TableOperation insertOperation = TableOperation.Insert(new SmsMessageRejectedTableInsert(context.Message.ToPhoneNumber, $"{context.Message.Reason.Replace(" ", "-").ToLower()} [{context.Message.UId}]") { SmsMessageJson = JsonSerializer.Serialize(context.Message) });
-            await table.ExecuteAsync(insertOperation);
+            try
+            {
+                CloudStorageAccount storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("AzureWebJobsStorage", EnvironmentVariableTarget.Process));
+                CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
+                CloudTable table = tableClient.GetTableReference("TwilioErrors");
+                await table.CreateIfNotExistsAsync();
+                TableOperation insertOperation = TableOperation.Insert(new SmsMessageRejectedTableInsert(
+                    context.Message.ToPhoneNumber, 
+                    $"{context.Message.Reason.Replace(" ", "-").ToLower()} [{context.Message.UId}]") { SmsMessageJson = JsonSerializer.Serialize(context.Message) });
+                await table.ExecuteAsync(insertOperation);
 
-            var m = $"Message rejected {DateTime.UtcNow}: {{ uid: \"{context.Message.UId}\", message: \"{context.Message.Message}\", reason: \"{context.Message.Reason}\"}}";
-            LogContext.Warning?.Log(m);
+                var m = $"Message rejected {DateTime.UtcNow}: {{ uid: \"{context.Message.UId}\", message: \"{context.Message.Message}\", reason: \"{context.Message.Reason}\"}}";
+                LogContext.Warning?.Log(m);
+            }
+            catch (StorageException e)
+            {
+                throw;
+            }
+
         }
     }
 
@@ -34,5 +44,23 @@ namespace CampaignManagement.Consumer
         }
 
         public string SmsMessageJson { get; set; }
+    }
+
+    public class SmsMessageRejectedConsumerDefinition : ConsumerDefinition<SmsMessageRejectedConsumer>
+    {
+        protected override void ConfigureConsumer(IReceiveEndpointConfigurator endpointConfigurator, IConsumerConfigurator<SmsMessageRejectedConsumer> consumerConfigurator)
+        {
+            endpointConfigurator.UseDelayedRedelivery(r =>
+            {
+                r.Intervals(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(30));
+            });
+
+            consumerConfigurator.UseMessageRetry(x =>
+            {
+                x.Immediate(2);
+            });
+
+            endpointConfigurator.UseInMemoryOutbox();
+        }
     }
 }

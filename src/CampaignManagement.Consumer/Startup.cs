@@ -22,7 +22,7 @@ namespace CampaignManagement.Consumer
                     cfg.AddConsumersFromNamespaceContaining<ConsumerNamespace>();
                     cfg.AddRequestClient<SubmitSmsMessage>(new Uri($"queue:submit-sms-message"));
                 },
-                "AzureWebJobsServiceBus");
+                connectionStringConfigurationKey: "AzureWebJobsServiceBus");
         }
     }
 }
